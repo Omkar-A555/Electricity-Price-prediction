@@ -115,6 +115,19 @@ if st.button("🚀 Generate Electricity Forecast", type="primary", use_container
         model.predict(seq, verbose=0)[0].reshape(-1, 1)
     ).flatten()
 
+    # Rescale the model output to the consumption level the user entered
+    model_average = preds.mean()
+    if model_average <= 0:
+        model_average = 1
+    preds = preds / model_average * daily_consumption
+
+    # Keep predictions inside a realistic band around the user's average
+    if consumer_type == "Household":
+        lower, upper = daily_consumption * 0.75, daily_consumption * 1.25
+    else:
+        lower, upper = daily_consumption * 0.85, daily_consumption * 1.15
+    preds = np.clip(preds, lower, upper)
+
     dates = pd.date_range(pd.Timestamp.today().normalize() + pd.Timedelta(days=1), periods=30, freq="D")
 
     daily_bill = preds * unit_cost
